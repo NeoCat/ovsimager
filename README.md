@@ -21,7 +21,7 @@ useful feature for trouble-shooting in SDN environments.
 
 ### Trace ping packets
 
-- Execute ping packet with size = 400 byte
+Execute ping packet with size = 400 byte, and trace them:
 
     $ ping -s 400 192.0.2.1
     $ sudo ovsimager -d
@@ -29,7 +29,7 @@ useful feature for trouble-shooting in SDN environments.
 
 ![sample](sample-ping-trace.png)
 
-- Or ovsimager also can send ping
+Or, ovsimager also can send ping:
 
     $ sudo ovsimager -d -f 10.0.0.1 -t 192.0.2.1
 
