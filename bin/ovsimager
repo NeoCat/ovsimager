@@ -1,0 +1,7 @@
+#!/usr/bin/ruby
+require 'ovsimager'
+
+ovsimager = OVSImager::OVSImager.new
+ovsimager.parse_options
+ovsimager.execute_dump
+ovsimager.show_all
