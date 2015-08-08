@@ -33,6 +33,12 @@ Or, ovsimager also can send ping:
 
     $ sudo ovsimager -d -f 10.0.0.1 -t 192.0.2.1
 
+Colors:
+
+- Yellow => both 'ping' and 'pong' are went through
+- Pink   => only 'ping' is went through
+- Red    => only 'pong' is went through
+
 ## Contributing
 
 1. Fork it ( https://github.com/NeoCat/ovsimager/fork )
