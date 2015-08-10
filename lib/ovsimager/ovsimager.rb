@@ -111,6 +111,7 @@ module OVSImager
         @dotwriter.br_begin(name, '')
         br[:interfaces].each do |ifname|
           iface = @ifaces[ifname]
+          next unless iface
           @dotwriter.br_iface(ifname, @mark[ifname], @dump_result[ifname],
                               iface[:inet], iface[:tag], iface[:peer])
           show_iface iface

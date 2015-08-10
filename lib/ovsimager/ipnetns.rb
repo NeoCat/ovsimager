@@ -36,7 +36,7 @@ module OVSImager
     private
     def parse(out, args)
       out.split(/\n(?=[^ \s])/).map do |iface|
-        if iface.match(/^(\d+):\s+(\S+?):+/)
+        if iface.match(/^(\d+):\s+(\S+?)(?:@\S+)?:+/)
           params = {:id => $1, :name => $2}
           yield params, iface, args
         else
