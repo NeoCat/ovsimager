@@ -13,7 +13,7 @@ module OVSImager
     def initialize(dump_mode=false, ping_from=nil, ping_to=nil)
       @netns = IPNetNS.new
       @ifaces = @netns.ifaces_hash
-      @linbr = LinuxBridge.new
+      @linbr = LinuxBridge.new(@netns.ns)
       @ovsvs = OVSVS.new
 
       @dot_filename = DEFAULT_DOT_FILENAME

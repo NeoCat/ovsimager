@@ -5,7 +5,7 @@ module OVSImager
       @dot = File.open(fname, 'w')
       @dot.puts 'graph interfaces {'
       @dot.puts '  compound=true'
-      @dot.puts '  node [shape=rect]'
+      @dot.puts '  node [shape=rect,margin=0.1]'
       @dot_peers = []
     end
 

@@ -17,6 +17,10 @@ module OVSImager
       find_veth_pair
     end
 
+    def ns()
+      @ns
+    end
+
     def to_hash()
       @ifaces
     end
