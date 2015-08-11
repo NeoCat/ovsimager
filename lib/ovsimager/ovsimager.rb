@@ -7,8 +7,8 @@ require_relative 'dotwriter'
 
 module OVSImager
   class OVSImager
-    DOT_FILENAME = 'interfaces.dot'
-    PNG_FILENAME = 'interfaces.png'
+    DEFAULT_DOT_FILENAME = 'interfaces.dot'
+    DEFAULT_PNG_FILENAME = 'interfaces.png'
 
     def initialize(dump_mode=false, ping_from=nil, ping_to=nil)
       @netns = IPNetNS.new
@@ -16,7 +16,8 @@ module OVSImager
       @linbr = LinuxBridge.new
       @ovsvs = OVSVS.new
 
-      @dotwriter = DotWriter.new(DOT_FILENAME)
+      @dot_filename = DEFAULT_DOT_FILENAME
+      @png_filename = DEFAULT_PNG_FILENAME
 
       @dump_mode = dump_mode
       @mark = {}
@@ -41,6 +42,11 @@ module OVSImager
                 "send ping to specified address") do |v|
           @ping_to = v
         end
+        opts.on("-o FILENAME.png", "--out FILENAME.png",
+                "output PNG filename (default: interfaces.png)") do |v|
+          @png_filename = v
+          @dot_filename = v.sub(/\.png$/i, '') + '.dot'
+        end
       end.parse!
     end
 
@@ -60,12 +66,13 @@ module OVSImager
     end
 
     def show_all
+      @dotwriter = DotWriter.new(@dot_filename)
       show_ovsvs
       puts '-' * 80
       show_linbr
       puts '-' * 80
       show_netns
-      @dotwriter.finish(PNG_FILENAME) if @dotwriter
+      @dotwriter.finish(@png_filename)
       @dotwriter = nil
     end
 
@@ -83,62 +90,63 @@ module OVSImager
     def show_ovsvs
       @ovsvs.to_hash[:bridges].each do |br|
         puts "OVS Bridge #{br[:name]}:"
-        @dotwriter.br_begin(br[:name], 'OVS ')
+        @dotwriter.bridge(br[:name], 'OVS ') do |dot_br|
 
-        br[:ports].each do |port|
-          name = port[:name]
-          iface = @ifaces[name] || {}
-          inet = iface[:inet] || []
-          tag = port[:tag] ? ' (tag=' + port[:tag] + ')' : ''
-          peer = port[:peer] || iface[:peer]
-          remote = port[:remote_ip] ?
-            " #{port[:local_ip] || ''} => #{port[:remote_ip]}" : ''
-          patch = peer ? ' <-> ' + peer : remote
-          ns = iface[:ns] == :root ? '' : iface[:ns]
+          br[:ports].each do |port|
+            name = port[:name]
+            iface = @ifaces[name] || {}
+            inet = iface[:inet] || []
+            tag = port[:tag] ? ' (tag=' + port[:tag] + ')' : ''
+            peer = port[:peer] || iface[:peer]
+            remote = port[:remote_ip] ?
+              " #{port[:local_ip] || ''} => #{port[:remote_ip]}" : ''
+            patch = peer ? ' <-> ' + peer : remote
+            ns = iface[:ns] == :root ? '' : iface[:ns]
 
-          show_iface_common(name, inet, patch, tag, ns)
-          @dotwriter.br_iface(name, @mark[name], @dump_result[name],
+            show_iface_common(name, inet, patch, tag, ns)
+            dot_br.add_iface(name, @mark[name], @dump_result[name],
                              inet, tag, peer, remote)
-          @done[name] = true
+            @done[name] = true
+          end
+
         end
-        @dotwriter.br_end
       end
     end
 
     def show_linbr
       @linbr.to_hash.each do |name, br|
         puts "Bridge #{name}"
-        @dotwriter.br_begin(name, '')
-        br[:interfaces].each do |ifname|
-          iface = @ifaces[ifname]
-          next unless iface
-          @dotwriter.br_iface(ifname, @mark[ifname], @dump_result[ifname],
-                              iface[:inet], iface[:tag], iface[:peer])
-          show_iface iface
-          @done[ifname] = true
+        @dotwriter.bridge(name, '') do |dot_br|
+          br[:interfaces].each do |ifname|
+            iface = @ifaces[ifname]
+            next unless iface
+            dot_br.add_iface(ifname, @mark[ifname], @dump_result[ifname],
+                             iface[:inet], iface[:tag], iface[:peer])
+            show_iface iface
+            @done[ifname] = true
+          end
         end
-        @dotwriter.br_end
       end
     end
 
     def show_netns
       @netns.to_hash.each do |name, ifaces|
         puts "Namespace #{name}"
-        @dotwriter.ns_begin(name)
-        ifaces.each do |iface|
-          ifname = iface[:name]
-          if ifname != 'lo' and !iface[:inet].empty?
-            if @done[ifname]
-              @dotwriter.ns_br_iface(ifname)
-            else
-              @dotwriter.ns_iface(ifname, @mark[ifname], @dump_result[ifname],
-                                  iface[:inet], iface[:tag], iface[:peer])
+        @dotwriter.namespace(name) do |dot_ns|
+          ifaces.each do |iface|
+            ifname = iface[:name]
+            if ifname != 'lo' and !iface[:inet].empty?
+              if @done[ifname]
+                dot_ns.add_br_iface(ifname)
+              else
+                dot_ns.add_iface(ifname, @mark[ifname], @dump_result[ifname],
+                                 iface[:inet], iface[:tag], iface[:peer])
+              end
             end
+            show_iface iface unless @done[iface[:name]]
+            @done[iface[:name]] = true
           end
-          show_iface iface unless @done[iface[:name]]
-          @done[iface[:name]] = true
         end
-        @dotwriter.ns_end
       end
     end
 

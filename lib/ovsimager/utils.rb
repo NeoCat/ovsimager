@@ -15,5 +15,9 @@ module OVSImager
       end
       return out
     end
+
+    def self.escape_nodename(name)
+      name.to_s.gsub('-', '_')
+    end
   end
 end
