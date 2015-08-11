@@ -52,7 +52,7 @@ module OVSImager
 
     def execute_dump
       return unless @dump_mode
-      tcpdump = TcpDump.new(@ping_from && @ping_to, @ping_from, @ping_to)
+      tcpdump = TcpDump.new(!!@ping_to, @ping_from, @ping_to)
       @dump_result = tcpdump.test(@ifaces)
       @dump_result.each do |(iface, result)|
         if result[0] && result[2]

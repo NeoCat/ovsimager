@@ -14,8 +14,8 @@ module OVSImager
       result = {}
       ping = nil
       if @ping
-        puts "Sending ping from #{@from} to #{@to} ..."
-        ping = IO.popen("ping -s #{SIZE} -c 15 -I #{@from} #{@to} >/dev/null", "r")
+        puts "Sending ping from #{@from||'default'} to #{@to} ..."
+        ping = IO.popen("ping -s #{SIZE} -c 15 #{@from?'-I '+@from:''} #{@to} >/dev/null", "r")
       end
 
       threads = ifaces.map do |(iface, iref)|
