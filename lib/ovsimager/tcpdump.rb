@@ -27,7 +27,7 @@ module OVSImager
           puts dump.gets
           time_end = Time.now + 5
           req_from = req_to = rep_from = rep_to = nil
-          vxlan_from = vxlan_to = nil
+          vxlan_from = vxlan_to = vxlan_id = nil
           vxlan_cap = false
           vxlan_line = 0
           while (waitmax = time_end - Time.now) > 0 do
@@ -37,9 +37,10 @@ module OVSImager
               msg = r.gets
               break unless msg
               # puts msg
-              if msg.match(/([\da-f\.:]+)\.\d+ > ([\da-f\.:]+)\.\d+: VXLAN/)
+              if msg.match(/([\da-f\.:]+)\.\d+ > ([\da-f\.:]+)\.\d+: VXLAN.*vni (\d+)/)
                 vxlan_from = $1
                 vxlan_to = $2
+                vxlan_id = $3
                 vxlan_line = 3
               elsif msg.match(/length #{SIZE+8}/) &&
                   msg.match(/([\da-f\.:]+) > ([\da-f\.:]+): ICMP echo (request|reply)/)
@@ -52,9 +53,9 @@ module OVSImager
                 end
                 if vxlan_line > 0
                   if $3 == 'request'
-                    vxlan_cap = [vxlan_from, vxlan_to]
+                    vxlan_cap = [vxlan_from, vxlan_to, vxlan_id]
                   else
-                    vxlan_cap = [vxlan_to, vxlan_from]
+                    vxlan_cap = [vxlan_to, vxlan_from, vxlan_id]
                   end
                 end
                 break if req_from && req_to && rep_from && rep_to

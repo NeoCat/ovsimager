@@ -71,7 +71,7 @@ module OVSImager
           end
           if dump[4] && dump[4][:vxlan]
             vxlan = dump[4][:vxlan]
-            label += "<BR/><FONT POINT-SIZE=\"10\">(VXLAN " +
+            label += "<BR/><FONT POINT-SIZE=\"10\">(VXLAN #{vxlan[2]} " +
               "#{vxlan[0]}&lt;=&gt;#{vxlan[1]})</FONT>"
           end
         end
