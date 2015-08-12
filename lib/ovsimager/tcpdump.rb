@@ -23,13 +23,13 @@ module OVSImager
           Thread.current[:iface] = iface
           ns = iref[:ns]
           nscmd = ns == :root ? '' : "ip netns exec #{ns} "
-          dump = IO.popen("exec #{nscmd}tcpdump -v -l -n -nn -i #{iface} \\( icmp or udp port 4789 \\) and greater #{SIZE} 2>&1", "r")
+          dump = IO.popen("exec #{nscmd}tcpdump -v -l -n -nn -i #{iface} \\( icmp or udp port 4789 or proto gre \\) and greater #{SIZE} 2>&1", "r")
           puts dump.gets
           time_end = Time.now + 5
           req_from = req_to = rep_from = rep_to = nil
-          vxlan_from = vxlan_to = vxlan_id = nil
-          vxlan_cap = false
-          vxlan_line = 0
+          cap_from = cap_to = cap_type = cap_id = nil
+          cap = false
+          cap_line = 0
           while (waitmax = time_end - Time.now) > 0 do
             rs, ws, = IO.select([dump], [], [], waitmax)
             break unless rs
@@ -37,11 +37,13 @@ module OVSImager
               msg = r.gets
               break unless msg
               # puts msg
-              if msg.match(/([\da-f\.:]+)\.\d+ > ([\da-f\.:]+)\.\d+: VXLAN.*vni (\d+)/)
-                vxlan_from = $1
-                vxlan_to = $2
-                vxlan_id = $3
-                vxlan_line = 3
+              if msg.match(/([\da-f\.:]+)\.\d+ > ([\da-f\.:]+)\.\d+: (VXLAN).*vni (\d+)/) ||
+                  msg.match(/([\da-f\.:]+) > ([\da-f\.:]+): (GRE).*key=([\da-f]+)/)
+                cap_from = $1
+                cap_to = $2
+                cap_type = $3
+                cap_id = $4
+                cap_line = 3
               elsif msg.match(/length #{SIZE+8}/) &&
                   msg.match(/([\da-f\.:]+) > ([\da-f\.:]+): ICMP echo (request|reply)/)
                 if $3 == 'request'
@@ -51,23 +53,23 @@ module OVSImager
                   rep_from = $1
                   rep_to = $2
                 end
-                if vxlan_line > 0
+                if cap_line > 0
                   if $3 == 'request'
-                    vxlan_cap = [vxlan_from, vxlan_to, vxlan_id]
+                    cap = [cap_from, cap_to, cap_type, cap_id]
                   else
-                    vxlan_cap = [vxlan_to, vxlan_from, vxlan_id]
+                    cap = [cap_to, cap_from, cap_type, cap_id]
                   end
                 end
                 break if req_from && req_to && rep_from && rep_to
               end
-              vxlan_line -= 1 if vxlan_line > 0
+              cap_line -= 1 if cap_line > 0
             end
           end
           puts "Killing tcpdump(#{dump.pid}) on interface #{iface}."
           Process.kill('TERM', dump.pid)
           dump.close
           result[iface] = [req_from, req_to, rep_from, rep_to, {}]
-          result[iface][4][:vxlan] = vxlan_cap if vxlan_cap
+          result[iface][4][:cap] = cap if cap
         end
       end
       threads.each {|th| th.join(10)}

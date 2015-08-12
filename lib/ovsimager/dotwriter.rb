@@ -69,10 +69,10 @@ module OVSImager
             label += "<BR/>[#{dump[0]} --&gt; #{dump[1]}]" if dump[0]
             label += "<BR/>[#{dump[3]} &lt;-- #{dump[2]}]" if dump[2]
           end
-          if dump[4] && dump[4][:vxlan]
-            vxlan = dump[4][:vxlan]
-            label += "<BR/><FONT POINT-SIZE=\"10\">(VXLAN #{vxlan[2]} " +
-              "#{vxlan[0]}&lt;=&gt;#{vxlan[1]})</FONT>"
+          if dump[4] && dump[4][:cap]
+            cap = dump[4][:cap]
+            label += "<BR/><FONT POINT-SIZE=\"10\">(#{cap[2]} #{cap[3]} " +
+              "#{cap[0]}&lt;=&gt;#{cap[1]})</FONT>"
           end
         end
         label += " </FONT>"
