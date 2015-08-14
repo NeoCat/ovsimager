@@ -42,7 +42,7 @@ module OVSImager
       out.split(/\n(?=[^ \s])/).map do |iface|
         if iface.match(/^(\d+):\s+(\S+?)(?:@(\S+))?:+/)
           params = {:id => $1, :name => $2}
-          params[:peer] = $3 if $3 && $3 != 'NONE'
+          params[:peer] = $3 if $3 && $3 != 'NONE' && $3[0,2] != 'if'
           yield params, iface, args
         else
           STDERR.puts "IPNetNS: parse error: #{iface}"
