@@ -77,7 +77,7 @@ module OVSImager
     end
 
     private
-    def show_iface_common(name, inet, patch, tag='', ns='')
+    def show_iface_common(name, inet, patch='', tag='', ns='')
       puts "    [#{@mark[name]||' '}] #{name}#{tag}#{patch}\t" +
         "#{inet.join(',')}\t#{ns}"
     end
@@ -107,6 +107,20 @@ module OVSImager
             dot_br.add_iface(name, @mark[name], @dump_result[name],
                              inet, tag, peer, remote)
             @done[name] = true
+
+            port[:interfaces].each do |port_if|
+              port_name = port_if[:name]
+              if port_name != name
+                print "    "
+                port_inet = @ifaces[port_name] && @ifaces[port_name][:inet]
+                show_iface_common(port_name, inet)
+                dot_br.add_iface(port_name, @mark[port_name],
+                                 @dump_result[port_name], port_inet,
+                                 '', ' '+name)
+                ###
+                @done[port_name] = true
+              end
+            end
           end
 
         end

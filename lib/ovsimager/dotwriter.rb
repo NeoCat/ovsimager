@@ -57,7 +57,7 @@ module OVSImager
 
       def add_iface(name, mark, dump, inet, tag, peer, remote=nil)
         fill = mark ? "fillcolor=#{mark2color(mark)},style=filled," : ''
-        label = "#{name}<BR/><FONT POINT-SIZE=\"10\">#{inet.join(',')}"
+        label = "#{name}<BR/><FONT POINT-SIZE=\"10\">#{inet.join('<BR/>')}"
         if tag or remote
           label += "<BR/>#{tag}#{remote && remote.gsub('>','&gt;')}"
         end
@@ -77,8 +77,12 @@ module OVSImager
         end
         label += " </FONT>"
         @dot.puts "    #{escape(name)} [#{fill}label=<#{label}>]"
-        if peer && name <= peer
-          @dot_peers << "  #{escape(name)} -- #{escape(peer)}"
+        if peer
+          if peer[0] == ' '
+            @dot_peers << "  #{escape(peer.strip)} -- #{escape(name)}"
+          elsif name <= peer
+            @dot_peers << "  #{escape(name)} -- #{escape(peer)}"
+          end
         end
       end
 
