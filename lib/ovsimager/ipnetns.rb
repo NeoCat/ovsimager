@@ -3,7 +3,7 @@ require_relative 'utils'
 module OVSImager
   class IPNetNS
     def initialize()
-      @ns = exec_ip('netns').split(/\n/)
+      @ns = exec_ip('netns').split(/\n/).map{|x| x.sub(/\s+\(id: \d+\)/, '')}
       @ifaces = {:root => parse_address(exec_ip('a'), :root)}
       links = parse_link(exec_ip('-d link'), :root)
       merge_link_type(@ifaces[:root], links)
@@ -42,7 +42,11 @@ module OVSImager
       out.split(/\n(?=[^ \s])/).map do |iface|
         if iface.match(/^(\d+):\s+(\S+?)(?:@(\S+))?:+/)
           params = {:id => $1, :name => $2}
-          params[:peer] = $3 if $3 && $3 != 'NONE' && $3[0,2] != 'if'
+          if $3 && $3[0,2] == 'if'
+            params[:peerid] = $3.sub(/^if/, '')
+          elsif $3 && $3 != 'NONE'
+            params[:peer] = $3
+          end
           yield params, iface, args
         else
           STDERR.puts "IPNetNS: parse error: #{iface}"
@@ -69,7 +73,7 @@ module OVSImager
       parse(out, ns) do |params, iface, ns|
         params[:ns] = ns
         params[:mac] = $1 if iface.match(/link\/\w+ (\S+)/)
-        params[:type] = (iface.split(/\n/)[2] || '').strip
+        params[:type] = (iface.split(/\n/)[2] || '').strip.split(/\s+/)[0]
         params
       end
     end
@@ -83,7 +87,13 @@ module OVSImager
       ifaces = ifaces_ary
       ifaces.each do |iface|
         next unless iface
-        if iface[:type] == 'veth' && !iface[:peer]
+        if iface[:type] == 'veth' && !iface[:peer] && iface[:peerid]
+          peerid = iface[:peerid].to_i
+          if ifaces[peerid] && ifaces[peerid][:peerid] == iface[:id]
+            iface[:peer] = ifaces[peerid][:name]
+            ifaces[peerid][:peer] = iface[:name]
+          end
+        elsif iface[:type] == 'veth' && !iface[:peer] && !iface[:peerid]
           if iface[:ns] == :root
             out = Utils::execute("ethtool -S #{iface[:name]}")
           else
