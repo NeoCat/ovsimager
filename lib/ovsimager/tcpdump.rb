@@ -18,8 +18,9 @@ module OVSImager
         ping = IO.popen("ping -s #{SIZE} -c 15 #{@from?'-I '+@from:''} #{@to} >/dev/null", "r")
       end
 
-      threads = ifaces.map do |(iface, iref)|
+      threads = ifaces.map do |(nn, iref)|
         Thread.new do
+          iface = iref[:name]
           Thread.current[:iface] = iface
           ns = iref[:ns]
           nscmd = ns == :root ? '' : "ip netns exec #{ns} "
@@ -68,8 +69,9 @@ module OVSImager
           puts "Killing tcpdump(#{dump.pid}) on interface #{iface}."
           Process.kill('TERM', dump.pid)
           dump.close
-          result[iface] = [req_from, req_to, rep_from, rep_to, {}]
-          result[iface][4][:cap] = cap if cap
+          ifname_netns = iface + (ns == :root ? "" : ":" + ns.to_s)
+          result[ifname_netns] = [req_from, req_to, rep_from, rep_to, {}]
+          result[ifname_netns][4][:cap] = cap if cap
         end
       end
       threads.each {|th| th.join(10)}

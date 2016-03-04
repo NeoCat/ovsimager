@@ -77,14 +77,22 @@ module OVSImager
     end
 
     private
-    def show_iface_common(name, inet, patch='', tag='', ns='')
-      puts "    [#{@mark[name]||' '}] #{name}#{tag}#{patch}\t" +
-        "#{inet.join(',')}\t#{ns}"
+    def ifname_ns(iface)
+      iface[:name] + (iface[:ns] == :root ? "" : ":" + iface[:ns].to_s)
+    end
+
+    def mark(name, ns)
+      @mark[name + (ns == :root ? "" : ":" + ns.to_s)]
+    end
+
+    def show_iface_common(name, inet, patch='', tag='', ns=:root)
+      puts "    [#{mark(name, ns)||' '}] #{name}#{tag}#{patch}\t" +
+        "#{inet.join(',')}\t#{ns == :root ? '' : ns}"
     end
 
     def show_iface(iface)
       patch = iface[:peer] ? " <-> #{iface[:peer]}" : ''
-      show_iface_common(iface[:name], iface[:inet], patch)
+      show_iface_common(iface[:name], iface[:inet], patch, '', iface[:ns])
     end
 
     def show_ovsvs
@@ -94,19 +102,22 @@ module OVSImager
 
           br[:ports].each do |port|
             name = port[:name]
-            iface = @ifaces[name] || {}
+            iface = @ifaces[name]
+            _, iface = @ifaces.find {|i, _| i.split(':')[0] == name} unless iface
+            iface = {:name => name, :ns => :root} unless iface
             inet = iface[:inet] || []
             tag = port[:tag] ? ' (tag=' + port[:tag] + ')' : ''
             peer = port[:peer] || iface[:peer]
             remote = port[:remote_ip] ?
               " #{port[:local_ip] || ''} => #{port[:remote_ip]}" : ''
             patch = peer ? ' <-> ' + peer : remote
-            ns = iface[:ns] == :root ? '' : iface[:ns]
+            ns = iface[:ns]
+            nn = ifname_ns(iface)
 
             show_iface_common(name, inet, patch, tag, ns)
-            dot_br.add_iface(name, @mark[name], @dump_result[name],
-                             inet, tag, peer, remote)
-            @done[name] = true
+            dot_br.add_iface(name, mark(name, ns), @dump_result[name],
+                             inet, tag, peer, remote, ns)
+            @done[nn] = true
 
             port[:interfaces].each do |port_if|
               port_name = port_if[:name]
@@ -116,9 +127,9 @@ module OVSImager
                 show_iface_common(port_name, inet)
                 dot_br.add_iface(port_name, @mark[port_name],
                                  @dump_result[port_name], port_inet,
-                                 '', ' '+name)
+                                 '', ' '+name, nil, ns)
                 ###
-                @done[port_name] = true
+                @done[nn] = true
               end
             end
           end
@@ -149,16 +160,18 @@ module OVSImager
         @dotwriter.namespace(name) do |dot_ns|
           ifaces.each do |iface|
             ifname = iface[:name]
+            nn = ifname_ns(iface)
             if ifname != 'lo' and !iface[:inet].empty?
-              if @done[ifname]
-                dot_ns.add_br_iface(ifname)
+              if @done[nn]
+                dot_ns.add_br_iface(ifname, iface[:ns])
               else
-                dot_ns.add_iface(ifname, @mark[ifname], @dump_result[ifname],
-                                 iface[:inet], iface[:tag], iface[:peer])
+                dot_ns.add_iface(ifname, mark(ifname, name), @dump_result[nn],
+                                 iface[:inet], iface[:tag], iface[:peer],
+                                 remote=nil, ns=name)
               end
             end
-            show_iface iface unless @done[iface[:name]]
-            @done[iface[:name]] = true
+            show_iface iface unless @done[nn]
+            @done[nn] = true
           end
         end
       end

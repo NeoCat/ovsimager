@@ -25,8 +25,12 @@ module OVSImager
       @ifaces
     end
 
+    def ifname_ns(iface)
+      iface[:name] + (iface[:ns] == :root ? "" : ":" + iface[:ns].to_s)
+    end
+
     def ifaces_hash()
-      @ifaces.inject({}) {|h, (ns, v)| v.each {|i| h[i[:name]] = i}; h}
+      @ifaces.inject({}) {|h, (ns, v)| v.each {|i| h[ifname_ns(i)] = i}; h}
     end
 
     def ifaces_ary()

@@ -55,7 +55,7 @@ module OVSImager
         @dot_peers = dot_peers
       end
 
-      def add_iface(name, mark, dump, inet, tag, peer, remote=nil)
+      def add_iface(name, mark, dump, inet, tag, peer, remote=nil, ns=:root)
         fill = mark ? "fillcolor=#{mark2color(mark)},style=filled," : ''
         label = "#{name}<BR/><FONT POINT-SIZE=\"10\">#{inet.join('<BR/>')}"
         if tag or remote
@@ -76,12 +76,13 @@ module OVSImager
           end
         end
         label += " </FONT>"
-        @dot.puts "    #{escape(name)} [#{fill}label=<#{label}>]"
+        ename = escape(name) + (ns == :root ? '' : "___" + escape(ns.to_s))
+        @dot.puts "    #{ename} [#{fill}label=<#{label}>]"
         if peer
           if peer[0] == ' '
-            @dot_peers << "  #{escape(peer.strip)} -- #{escape(name)}"
+            @dot_peers << "  #{escape(peer.strip)} -- #{ename}"
           elsif name <= peer
-            @dot_peers << "  #{escape(name)} -- #{escape(peer)}"
+            @dot_peers << "  #{ename} -- #{escape(peer)}"
           end
         end
       end
@@ -104,8 +105,9 @@ module OVSImager
         @nsname = nsname
       end
 
-      def add_br_iface(name)
-        @dot_peers << "  #{escape(name)} -- ns__#{escape(@nsname)} " +
+      def add_br_iface(name, ns=:root)
+        ename = escape(name) + (ns == :root ? '' : "___" + escape(ns.to_s))
+        @dot_peers << "  #{ename} -- ns__#{escape(@nsname)} " +
           "[style=dashed,lhead=cluster_ns__#{escape(@nsname)}]"
       end
     end
