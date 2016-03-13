@@ -77,21 +77,29 @@ module OVSImager
     end
 
     private
+    def ns_str(ns, prefix=':')
+      ns ? ns == :root ? '' : prefix + ns.to_s : ''
+    end
+
     def ifname_ns(iface)
-      iface[:name] + (iface[:ns] == :root ? "" : ":" + iface[:ns].to_s)
+      iface[:name] + ns_str(iface[:ns])
+    end
+
+    def peer(iface)
+      iface[:peer] && iface[:peer] + ns_str(iface[:peerns])
     end
 
     def mark(name, ns)
-      @mark[name + (ns == :root ? "" : ":" + ns.to_s)]
+      @mark[name + ns_str(ns)]
     end
 
     def show_iface_common(name, inet, patch='', tag='', ns=:root)
       puts "    [#{mark(name, ns)||' '}] #{name}#{tag}#{patch}\t" +
-        "#{inet.join(',')}\t#{ns == :root ? '' : ns}"
+        "#{inet.join(',')}\t#{ns_str(ns, '')}"
     end
 
     def show_iface(iface)
-      patch = iface[:peer] ? " <-> #{iface[:peer]}" : ''
+      patch = iface[:peer] ? " <-> #{peer(iface)}" : ''
       show_iface_common(iface[:name], iface[:inet], patch, '', iface[:ns])
     end
 
@@ -146,7 +154,7 @@ module OVSImager
             iface = @ifaces[ifname]
             next unless iface
             dot_br.add_iface(ifname, @mark[ifname], @dump_result[ifname],
-                             iface[:inet], iface[:tag], iface[:peer])
+                             iface[:inet], iface[:tag], peer(iface))
             show_iface iface
             @done[ifname] = true
           end
@@ -166,7 +174,7 @@ module OVSImager
                 dot_ns.add_br_iface(ifname, iface[:ns])
               else
                 dot_ns.add_iface(ifname, mark(ifname, name), @dump_result[nn],
-                                 iface[:inet], iface[:tag], iface[:peer],
+                                 iface[:inet], iface[:tag], peer(iface),
                                  remote=nil, ns=name)
               end
             end

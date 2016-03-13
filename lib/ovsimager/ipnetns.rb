@@ -95,7 +95,9 @@ module OVSImager
           peerid = iface[:peerid].to_i
           if ifaces[peerid] && ifaces[peerid][:peerid] == iface[:id]
             iface[:peer] = ifaces[peerid][:name]
+            iface[:peerns] = ifaces[peerid][:ns]
             ifaces[peerid][:peer] = iface[:name]
+            ifaces[peerid][:peerns] = iface[:ns]
           end
         elsif iface[:type] == 'veth' && !iface[:peer] && !iface[:peerid]
           if iface[:ns] == :root
@@ -105,7 +107,9 @@ module OVSImager
           end
           if out.match /peer_ifindex: (\d+)/
             iface[:peer] = ifaces[$1.to_i][:name]
+            iface[:peerns] = ifaces[$1.to_i][:ns]
             ifaces[$1.to_i][:peer] = iface[:name]
+            ifaces[$1.to_i][:peerns] = iface[:ns]
           else
             STDERR.puts("Failed to lookup veth peer of '#{iface[:name]}'")
           end
